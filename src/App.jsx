@@ -1,10 +1,9 @@
-
-import NavBar from "./components/Navbar";
-import HeroSection from "./components/HeroSection";
-import CharactersGrid from "./components/CharactersGridSearch";
-import LocationsGrid from "./components/LocationsGrid";
-import Footer from "./components/Footer";
-import Docs from "./components/Docs";
+import NavBar from "./components/NavBar.jsx";
+import HeroSection from "./components/HeroSection.jsx";
+import CharactersGrid from "./components/CharactersGridSearch.jsx";
+import LocationsGrid from "./components/LocationsGrid.jsx";
+import Footer from "./components/Footer.jsx";
+import Docs from "./components/Docs.jsx";
 
 import { useState, useEffect } from "react";
 
