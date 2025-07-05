@@ -4,9 +4,14 @@ function CharactersGrid({ search, setTotal, setShown }) {
   const [characters, setCharacters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
 
   useEffect(() => {
-    fetch("https://hora-aventura-api.vercel.app/api/personajes")
+
+    fetch("https://hora-aventura-api.vercel.app/api/personajes?limit=50")
       .then((res) => {
         if (!res.ok) throw new Error("Error al cargar personajes");
         return res.json();
@@ -21,7 +26,7 @@ function CharactersGrid({ search, setTotal, setShown }) {
         setLoading(false);
       });
 
-  }, []);
+  }, [setTotal]);
 
   const filtered = characters.filter((char) => {
     if (!search) return true;
@@ -33,19 +38,144 @@ function CharactersGrid({ search, setTotal, setShown }) {
     );
   });
 
+  
+  const totalPages = search ? 1 : Math.ceil(characters.length / itemsPerPage);
+  const startIndex = search ? 0 : (currentPage - 1) * itemsPerPage;
+  const endIndex = search ? filtered.length : startIndex + itemsPerPage;
+  const displayedCharacters = search ? filtered : characters.slice(startIndex, endIndex);
+
   useEffect(() => {
-    setShown && setShown(filtered.length);
-    // eslint-disable-next-line
-  }, [filtered.length]);
+    setCurrentPage(1);
+  }, [search]);
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  useEffect(() => {
+    setShown && setShown(search ? filtered.length : displayedCharacters.length);
+  
+  }, [filtered.length, displayedCharacters.length, search]);
 
   if (loading) return <div className="text-blue-200 mt-8">Loading...</div>;
   if (error) return <div className="text-red-400 mt-8">{error}</div>;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mt-10 w-full max-w-4xl mx-auto">
-      {filtered.map((char) => (
-        <CharacterCard key={char.id} character={char} />
-      ))}
+    <div className="w-full max-w-6xl mx-auto">
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-10">
+        {displayedCharacters.map((char) => (
+          <CharacterCard key={char.id} character={char} />
+        ))}
+      </div>
+
+  
+      {!search && totalPages > 1 && (
+        <div className="flex flex-col items-center mt-12 mb-8 space-y-4">
+          {/* Page Info */}
+          <div className="text-blue-200 text-sm">
+            Página {currentPage} de {totalPages} 
+            <span className="text-blue-300 ml-2">
+              (Mostrando {displayedCharacters.length} de {characters.length} personajes)
+            </span>
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="flex items-center space-x-2">
+            {/* Previous Button */}
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                currentPage > 1
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg'
+                  : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              ← Anterior
+            </button>
+
+            {/* Page Numbers */}
+            <div className="flex items-center space-x-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(page => {
+                  // Show current page, first page, last page, and pages around current
+                  return page === 1 || 
+                         page === totalPages || 
+                         (page >= currentPage - 1 && page <= currentPage + 1);
+                })
+                .map((page, index, arr) => {
+                
+                  const showEllipsis = index > 0 && page - arr[index - 1] > 1;
+                  
+                  return (
+                    <div key={page} className="flex items-center">
+                      {showEllipsis && (
+                        <span className="px-2 text-blue-300">...</span>
+                      )}
+                      <button
+                        onClick={() => handlePageChange(page)}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          page === currentPage
+                            ? 'bg-blue-500 text-white shadow-md'
+                            : 'bg-[#232946] text-blue-200 hover:bg-blue-600 hover:text-white border border-blue-800'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    </div>
+                  );
+                })}
+            </div>
+
+            {/* Next Button */}
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                currentPage < totalPages
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg'
+                  : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              Siguiente →
+            </button>
+          </div>
+
+          {/* Quick Jump (for many pages) */}
+          {totalPages > 5 && (
+            <div className="flex items-center space-x-2 text-sm">
+              <span className="text-blue-200">Ir a página:</span>
+              <input
+                type="number"
+                min="1"
+                max={totalPages}
+                value={currentPage}
+                onChange={(e) => {
+                  const page = parseInt(e.target.value);
+                  if (page >= 1 && page <= totalPages) {
+                    handlePageChange(page);
+                  }
+                }}
+                className="w-16 px-2 py-1 rounded bg-[#232946] text-blue-200 border border-blue-800 text-center focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Search Results Info */}
+      {search && (
+        <div className="text-center mt-8 text-blue-200">
+          {filtered.length > 0 ? (
+            <p>Se encontraron {filtered.length} personajes que coinciden con "{search}"</p>
+          ) : (
+            <p>No se encontraron personajes que coincidan con "{search}"</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
